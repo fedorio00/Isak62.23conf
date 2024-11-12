@@ -23,41 +23,46 @@ class ShellEmulator(cmd.Cmd):
         """Загрузка виртуальной файловой системы из tar архива"""
         try:
             if not os.path.exists(self.fs_path):
-                # Создаем пустой архив, если его нет
-                with tarfile.open(self.fs_path, 'w'):
+                with tarfile.open(self.fs_path, 'w:'):
                     pass
-            self.tar = tarfile.open(self.fs_path, 'r')
+            self.tar = tarfile.open(self.fs_path, 'a:')
         except Exception as e:
             print(f"Ошибка при загрузке файловой системы: {e}")
             raise
 
     def do_ls(self, args):
         """Реализация команды ls"""
-        path = self.current_dir.replace('\\', '/').strip('/')
+        path = self.current_dir.strip('/').replace('\\', '/')
         members = self.tar.getmembers()
         
         # Если мы в корневом каталоге
         if not path:
             for member in members:
-                if '/' not in member.name:
-                    print(member.name)
+                name_parts = member.name.split('/')
+                if len(name_parts) == 1:
+                    print(name_parts[0])
         else:
             # Для подкаталогов
             for member in members:
-                if member.name.startswith(path + '/') and member.name[len(path)+1:].count('/') == 0:
-                    print(os.path.basename(member.name))
+                if member.name.startswith(path + '/'):
+                    remaining = member.name[len(path)+1:]
+                    if remaining and '/' not in remaining:
+                        print(remaining)
 
     def do_cd(self, args):
         """Реализация команды cd"""
-        if not args:
+        if not args or args == '/':
             self.current_dir = '/'
-            print(self.current_dir)
             return
 
-        new_path = os.path.normpath(os.path.join(self.current_dir, args))
+        if args.startswith('/'):
+            new_path = args
+        else:
+            new_path = os.path.normpath(os.path.join(self.current_dir, args))
+        
+        new_path = new_path.replace('\\', '/')
         if self._path_exists(new_path):
             self.current_dir = new_path
-            print(self.current_dir)
         else:
             print(f"cd: {args}: Нет такого каталога")
 
@@ -85,34 +90,117 @@ class ShellEmulator(cmd.Cmd):
 
     def do_who(self, args):
         """Показать пользователей, вошедших в систему"""
-        users = os.popen('who').read()
-        print(users)
+        # Для учебного эмулятора просто выводим фиктивного пользователя
+        print("student    pts/0        2024-03-21 10:00")
 
     def do_tail(self, args):
         """Показать последние строки файла"""
         if not args:
             print("Использование: tail <имя_файла>")
             return
+
         try:
-            with open(args, 'r') as f:
-                lines = f.readlines()[-10:]  # Получаем последние 10 строк
-                print(''.join(lines))
-        except FileNotFoundError:
-            print(f"Ошибка: файл {args} не найден.")
+            file_path = os.path.normpath(os.path.join(self.current_dir, args)).replace('\\', '/').strip('/')
+            
+            # Закрываем текущий архив
+            self.tar.close()
+            
+            # Открываем архив в режиме чтения
+            with tarfile.open(self.fs_path, 'r:') as tar:
+                try:
+                    member = tar.getmember(file_path)
+                    if not member.isfile():
+                        print(f"Ошибка: {args} не является файлом")
+                        return
+                    
+                    f = tar.extractfile(member)
+                    if f is None:
+                        print(f"Ошибка: невозможно прочитать файл {args}")
+                        return
+                    
+                    try:
+                        content = f.read().decode('utf-8')
+                        lines = content.splitlines()[-10:]
+                        if lines:
+                            print('\n'.join(lines))
+                    finally:
+                        f.close()
+                        
+                except KeyError:
+                    print(f"Ошибка: файл {args} не найден")
+                    
         except Exception as e:
             print(f"Ошибка: {e}")
+        
+        finally:
+            # Переоткрываем архив в режиме добавления
+            self._load_virtual_fs()
 
     def do_cp(self, args):
         """Копировать файл или каталог"""
         if not args:
             print("Использование: cp <источник> <назначение>")
             return
-        src, dest = args.split()
+            
         try:
-            os.system(f'cp {src} {dest}')
-            print(f"Копирование {src} в {dest} завершено.")
+            args_list = shlex.split(args)
+            if len(args_list) != 2:
+                print("Использование: cp <источник> <назначение>")
+                return
+                
+            src, dest = args_list
+            src_path = os.path.normpath(os.path.join(self.current_dir, src)).replace('\\', '/').strip('/')
+            dest_path = os.path.normpath(os.path.join(self.current_dir, dest)).replace('\\', '/').strip('/')
+            
+            try:
+                src_member = self.tar.getmember(src_path)
+                if not src_member.isfile():
+                    print(f"Ошибка: {src} не является файлом")
+                    return
+                
+                # Создаем новый архив
+                temp_tar_path = self.fs_path + '.temp'
+                
+                # Закрываем текущий архив перед копированием
+                self.tar.close()
+                
+                with tarfile.open(self.fs_path, 'r:') as src_tar, \
+                     tarfile.open(temp_tar_path, 'w:') as new_tar:
+                    
+                    # Копируем все существующие файлы
+                    for member in src_tar.getmembers():
+                        if member.name != dest_path:
+                            if member.isfile():
+                                with src_tar.extractfile(member) as f:
+                                    new_tar.addfile(member, f)
+                            else:
+                                new_tar.addfile(member)
+                    
+                    # Копируем исходный файл в новое место
+                    dest_info = tarfile.TarInfo(dest_path)
+                    dest_info.size = src_member.size
+                    dest_info.mode = src_member.mode
+                    dest_info.type = src_member.type
+                    
+                    with src_tar.extractfile(src_path) as f:
+                        new_tar.addfile(dest_info, f)
+                
+                # Заменяем старый архив новым
+                os.replace(temp_tar_path, self.fs_path)
+                print(f"Файл {src} успешно скопирован в {dest}")
+                
+            except KeyError:
+                print(f"Ошибка: файл {src} не найден")
+                return
+                
         except Exception as e:
-            print(f"Ошибка: {e}")
+            print(f"Ошибка при копировании: {e}")
+            if 'temp_tar_path' in locals() and os.path.exists(temp_tar_path):
+                os.remove(temp_tar_path)
+            
+        finally:
+            # Переоткрываем архив
+            self._load_virtual_fs()
 
 def main():
     config_path = 'config.toml'
