@@ -61,10 +61,6 @@ class ShellEmulator(cmd.Cmd):
         else:
             print(f"cd: {args}: Нет такого каталога")
 
-    def do_pwd(self, args):
-        """Реализация команды pwd"""
-        print(self.current_dir)
-
     def do_exit(self, args):
         """Выход из эмулятора"""
         return True
@@ -86,6 +82,37 @@ class ShellEmulator(cmd.Cmd):
         )
         
         return exists
+
+    def do_who(self, args):
+        """Показать пользователей, вошедших в систему"""
+        users = os.popen('who').read()
+        print(users)
+
+    def do_tail(self, args):
+        """Показать последние строки файла"""
+        if not args:
+            print("Использование: tail <имя_файла>")
+            return
+        try:
+            with open(args, 'r') as f:
+                lines = f.readlines()[-10:]  # Получаем последние 10 строк
+                print(''.join(lines))
+        except FileNotFoundError:
+            print(f"Ошибка: файл {args} не найден.")
+        except Exception as e:
+            print(f"Ошибка: {e}")
+
+    def do_cp(self, args):
+        """Копировать файл или каталог"""
+        if not args:
+            print("Использование: cp <источник> <назначение>")
+            return
+        src, dest = args.split()
+        try:
+            os.system(f'cp {src} {dest}')
+            print(f"Копирование {src} в {dest} завершено.")
+        except Exception as e:
+            print(f"Ошибка: {e}")
 
 def main():
     config_path = 'config.toml'
