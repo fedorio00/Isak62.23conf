@@ -33,21 +33,31 @@ class ShellEmulator(cmd.Cmd):
 
     def do_ls(self, args):
         """Реализация команды ls"""
-        path = self.current_dir
+        path = self.current_dir.replace('\\', '/').strip('/')
         members = self.tar.getmembers()
-        for member in members:
-            if os.path.dirname(member.name) == path.strip('/'):
-                print(os.path.basename(member.name))
+        
+        # Если мы в корневом каталоге
+        if not path:
+            for member in members:
+                if '/' not in member.name:
+                    print(member.name)
+        else:
+            # Для подкаталогов
+            for member in members:
+                if member.name.startswith(path + '/') and member.name[len(path)+1:].count('/') == 0:
+                    print(os.path.basename(member.name))
 
     def do_cd(self, args):
         """Реализация команды cd"""
         if not args:
             self.current_dir = '/'
+            print(self.current_dir)
             return
 
         new_path = os.path.normpath(os.path.join(self.current_dir, args))
         if self._path_exists(new_path):
             self.current_dir = new_path
+            print(self.current_dir)
         else:
             print(f"cd: {args}: Нет такого каталога")
 
@@ -63,13 +73,23 @@ class ShellEmulator(cmd.Cmd):
         """Проверка существования пути в виртуальной ФС"""
         if path == '/':
             return True
+        
         members = self.tar.getmembers()
-        return any(member.name.startswith(path.strip('/')) for member in members)
+        stripped_path = path.replace('\\', '/').strip('/')
+        
+        # Проверяем существование каталога
+        exists = any(
+            m.name == stripped_path or  # Точное совпадение
+            stripped_path == os.path.dirname(m.name) or  # Путь является родительским каталогом
+            m.name.startswith(stripped_path + '/')  # Путь является префиксом
+            for m in members
+        )
+        
+        return exists
 
 def main():
     config_path = 'config.toml'
     shell = ShellEmulator(config_path)
     shell.cmdloop()
-
 if __name__ == '__main__':
     main()
