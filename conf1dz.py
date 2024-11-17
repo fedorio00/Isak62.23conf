@@ -3,16 +3,19 @@ import cmd
 import tarfile
 import toml
 import shlex
+import tkinter as tk
+from tkinter import scrolledtext
 
 class ShellEmulator(cmd.Cmd):
     prompt = '$ '
     
-    def __init__(self, config_path):
+    def __init__(self, config_path, output_widget):
         super().__init__()
         self.current_dir = '/'
         self.config = self._load_config(config_path)
         self.fs_path = self.config.get('fs_path')
         self._load_virtual_fs()
+        self.output_widget = output_widget
 
     def _load_config(self, config_path):
         """Загрузка конфигурации из toml файла"""
@@ -27,27 +30,28 @@ class ShellEmulator(cmd.Cmd):
                     pass
             self.tar = tarfile.open(self.fs_path, 'a:')
         except Exception as e:
-            print(f"Ошибка при загрузке файловой системы: {e}")
+            self.output_widget.insert(tk.END, f"Ошибка при загрузке файловой системы: {e}\n")
             raise
 
     def do_ls(self, args):
         """Реализация команды ls"""
         path = self.current_dir.strip('/').replace('\\', '/')
         members = self.tar.getmembers()
-        
-        # Если мы в корневом каталоге
+        output = []
+
         if not path:
             for member in members:
                 name_parts = member.name.split('/')
                 if len(name_parts) == 1:
-                    print(name_parts[0])
+                    output.append(name_parts[0])
         else:
-            # Для подкаталогов
             for member in members:
                 if member.name.startswith(path + '/'):
                     remaining = member.name[len(path)+1:]
                     if remaining and '/' not in remaining:
-                        print(remaining)
+                        output.append(remaining)
+
+        self.output_widget.insert(tk.END, '\n'.join(output) + '\n')
 
     def do_cd(self, args):
         """Реализация команды cd"""
@@ -64,7 +68,7 @@ class ShellEmulator(cmd.Cmd):
         if self._path_exists(new_path):
             self.current_dir = new_path
         else:
-            print(f"cd: {args}: Нет такого каталога")
+            self.output_widget.insert(tk.END, f"cd: {args}: Нет такого каталога\n")
 
     def do_exit(self, args):
         """Выход из эмулятора"""
@@ -78,11 +82,10 @@ class ShellEmulator(cmd.Cmd):
         members = self.tar.getmembers()
         stripped_path = path.replace('\\', '/').strip('/')
         
-        # Проверяем существование каталога
         exists = any(
-            m.name == stripped_path or  # Точное совпадение
-            stripped_path == os.path.dirname(m.name) or  # Путь является родительским каталогом
-            m.name.startswith(stripped_path + '/')  # Путь является префиксом
+            m.name == stripped_path or
+            stripped_path == os.path.dirname(m.name) or
+            m.name.startswith(stripped_path + '/')
             for m in members
         )
         
@@ -90,62 +93,52 @@ class ShellEmulator(cmd.Cmd):
 
     def do_who(self, args):
         """Показать пользователей, вошедших в систему"""
-        # Для учебного эмулятора просто выводим фиктивного пользователя
-        print("student    pts/0        2024-03-21 10:00")
+        self.output_widget.insert(tk.END, "student    pts/0        2024-03-21 10:00\n")
 
     def do_tail(self, args):
         """Показать последние строки файла"""
         if not args:
-            print("Использование: tail <имя_файла>")
+            self.output_widget.insert(tk.END, "Использование: tail <имя_файла>\n")
             return
 
         try:
             file_path = os.path.normpath(os.path.join(self.current_dir, args)).replace('\\', '/').strip('/')
-            
-            # Закрываем текущий архив
             self.tar.close()
-            
-            # Открываем архив в режиме чтения
             with tarfile.open(self.fs_path, 'r:') as tar:
                 try:
                     member = tar.getmember(file_path)
                     if not member.isfile():
-                        print(f"Ошибка: {args} не является файлом")
+                        self.output_widget.insert(tk.END, f"Ошибка: {args} не является файлом\n")
                         return
                     
                     f = tar.extractfile(member)
                     if f is None:
-                        print(f"Ошибка: невозможно прочитать файл {args}")
+                        self.output_widget.insert(tk.END, f"Ошибка: невозможно прочитать файл {args}\n")
                         return
                     
-                    try:
-                        content = f.read().decode('utf-8')
-                        lines = content.splitlines()[-10:]
-                        if lines:
-                            print('\n'.join(lines))
-                    finally:
-                        f.close()
-                        
+                    content = f.read().decode('utf-8')
+                    lines = content.splitlines()[-10:]
+                    if lines:
+                        self.output_widget.insert(tk.END, '\n'.join(lines) + '\n')
                 except KeyError:
-                    print(f"Ошибка: файл {args} не найден")
+                    self.output_widget.insert(tk.END, f"Ошибка: файл {args} не найден\n")
                     
         except Exception as e:
-            print(f"Ошибка: {e}")
+            self.output_widget.insert(tk.END, f"Ошибка: {e}\n")
         
         finally:
-            # Переоткрываем архив в режиме добавления
             self._load_virtual_fs()
 
     def do_cp(self, args):
         """Копировать файл или каталог"""
         if not args:
-            print("Использование: cp <источник> <назначение>")
+            self.output_widget.insert(tk.END, "Использование: cp <источник> <назначение>\n")
             return
             
         try:
             args_list = shlex.split(args)
             if len(args_list) != 2:
-                print("Использование: cp <источник> <назначение>")
+                self.output_widget.insert(tk.END, "Использование: cp <источник> <назначение>\n")
                 return
                 
             src, dest = args_list
@@ -155,19 +148,15 @@ class ShellEmulator(cmd.Cmd):
             try:
                 src_member = self.tar.getmember(src_path)
                 if not src_member.isfile():
-                    print(f"Ошибка: {src} не является файлом")
+                    self.output_widget.insert(tk.END, f"Ошибка: {src} не является файлом\n")
                     return
                 
-                # Создаем новый архив
                 temp_tar_path = self.fs_path + '.temp'
-                
-                # Закрываем текущий архив перед копированием
                 self.tar.close()
                 
                 with tarfile.open(self.fs_path, 'r:') as src_tar, \
                      tarfile.open(temp_tar_path, 'w:') as new_tar:
                     
-                    # Копируем все существующие файлы
                     for member in src_tar.getmembers():
                         if member.name != dest_path:
                             if member.isfile():
@@ -176,7 +165,6 @@ class ShellEmulator(cmd.Cmd):
                             else:
                                 new_tar.addfile(member)
                     
-                    # Копируем исходный файл в новое место
                     dest_info = tarfile.TarInfo(dest_path)
                     dest_info.size = src_member.size
                     dest_info.mode = src_member.mode
@@ -185,26 +173,47 @@ class ShellEmulator(cmd.Cmd):
                     with src_tar.extractfile(src_path) as f:
                         new_tar.addfile(dest_info, f)
                 
-                # Заменяем старый архив новым
                 os.replace(temp_tar_path, self.fs_path)
-                print(f"Файл {src} успешно скопирован в {dest}")
+                self.output_widget.insert(tk.END, f"Файл {src} успешно скопирован в {dest}\n")
                 
             except KeyError:
-                print(f"Ошибка: файл {src} не найден")
+                self.output_widget.insert(tk.END, f"Ошибка: файл {src} не найден\n")
                 return
                 
         except Exception as e:
-            print(f"Ошибка при копировании: {e}")
+            self.output_widget.insert(tk.END, f"Ошибка при копировании: {e}\n")
             if 'temp_tar_path' in locals() and os.path.exists(temp_tar_path):
                 os.remove(temp_tar_path)
             
         finally:
-            # Переоткрываем архив
             self._load_virtual_fs()
 
-def main():
+    def cmdloop(self):
+        """Запуск цикла команд"""
+        while True:
+            command = input(self.prompt)
+            if self.onecmd(command):
+                break
+
+def run_shell():
+    """Запуск графического интерфейса"""
+    root = tk.Tk()
+    root.title("Shell Emulator")
+
+    output_widget = scrolledtext.ScrolledText(root, wrap=tk.WORD)
+    output_widget.pack(expand=True, fill='both')
+
     config_path = 'config.toml'
-    shell = ShellEmulator(config_path)
-    shell.cmdloop()
+    shell = ShellEmulator(config_path, output_widget)
+
+    def on_enter(event):
+        command = output_widget.get("end-2c linestart", "end-1c")
+        output_widget.insert(tk.END, shell.prompt + command + '\n')
+        shell.onecmd(command)
+        output_widget.see(tk.END)
+
+    output_widget.bind('<Return>', on_enter)
+    root.mainloop()
+
 if __name__ == '__main__':
-    main()
+    run_shell()
