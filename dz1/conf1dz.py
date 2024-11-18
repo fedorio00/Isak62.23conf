@@ -18,12 +18,10 @@ class ShellEmulator(cmd.Cmd):
         
 
     def _load_config(self, config_path):
-        """Загрузка конфигурации из toml файла"""
         with open(config_path, 'r') as f:
             return toml.load(f)
 
     def _load_virtual_fs(self):
-        """Загрузка виртуальной файловой системы из tar архива"""
         try:
             if not os.path.exists(self.fs_path):
                 with tarfile.open(self.fs_path, 'w:'):
@@ -34,7 +32,6 @@ class ShellEmulator(cmd.Cmd):
             raise
 
     def do_ls(self, args):
-        """Реализация команды ls"""
         self.output_widget.insert(tk.END, "\n")
         path = self.current_dir.strip('/').replace('\\', '/')
         members = self.tar.getmembers()
@@ -55,7 +52,6 @@ class ShellEmulator(cmd.Cmd):
         self.output_widget.insert(tk.END, '\n'.join(output))
 
     def do_cd(self, args):
-        """Реализация команды cd"""
         if not args or args == '/':
             self.current_dir = '/'
             return
@@ -72,12 +68,10 @@ class ShellEmulator(cmd.Cmd):
             self.output_widget.insert(tk.END, f"\ncd: {args}: Нет такого каталога\n")
 
     def do_exit(self, args):
-        """Выход из эмулятора"""
-        self.output_widget.quit()  # Завершает цикл обработки событий
-        self.output_widget.master.destroy()  # Закрываем главное окно
+        self.output_widget.quit()  
+        self.output_widget.master.destroy()  
 
     def _path_exists(self, path):
-        """Проверка существования пути в виртуальной ФС"""
         if path == '/':
             return True
         
@@ -94,11 +88,10 @@ class ShellEmulator(cmd.Cmd):
         return exists
 
     def do_who(self, args):
-        """Показать пользователей, вошедших в систему"""
         self.output_widget.insert(tk.END, "\n")
         self.output_widget.insert(tk.END, "student    pts/0        2024-03-21 10:00\n")
+    
     def do_tail(self, args):
-        """Показать последние строки файла"""
         self.output_widget.insert(tk.END, "\n")
         if not args:
             self.output_widget.insert(tk.END, "Использование: tail <имя_файла>\n")
@@ -131,8 +124,8 @@ class ShellEmulator(cmd.Cmd):
         
         finally:
             self._load_virtual_fs()
+    
     def do_cp(self, args):
-        """Копировать файл или каталог"""
         self.output_widget.insert(tk.END, "\n")
         if not args:
             self.output_widget.insert(tk.END, "Использование: cp <источник> <назначение>\n")
@@ -192,14 +185,12 @@ class ShellEmulator(cmd.Cmd):
             self._load_virtual_fs()
 
     def cmdloop(self):
-        """Запуск цикла команд"""
         while True:
             command = input(self.prompt)
             if self.onecmd(command):
                 break
 
 def run_shell():
-    """Запуск графического интерфейса"""
     root = tk.Tk()
     root.title("Shell Emulator")
 
