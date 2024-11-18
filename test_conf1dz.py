@@ -5,6 +5,7 @@ import tempfile
 import toml
 from conf1dz import ShellEmulator
 import io
+import tkinter as tk
 
 @pytest.fixture
 def temp_fs():
@@ -37,100 +38,105 @@ def temp_config(temp_fs):
 
 @pytest.fixture
 def shell(temp_config):
-    return ShellEmulator(temp_config)
+    # Создаем графический интерфейс для тестов
+    root = tk.Tk()
+    output_widget = tk.scrolledtext.ScrolledText(root)
+    output_widget.pack()
+    shell = ShellEmulator(temp_config, output_widget)
+    return shell, output_widget
 
 # Тесты для команды ls
-def test_ls_root(shell, capsys):
-    shell.do_ls('')
-    captured = capsys.readouterr()
-    assert 'test_dir' in captured.out
+def test_ls_root(shell):
+    shell[0].do_ls('')
+    output = shell[1].get("1.0", tk.END)
+    assert 'test_dir' in output
 
-def test_ls_subdir(shell, capsys):
-    shell.do_cd('test_dir')
-    shell.do_ls('')
-    captured = capsys.readouterr()
-    assert 'test_file.txt' in captured.out
-    assert 'subdir' in captured.out
+def test_ls_subdir(shell):
+    shell[0].do_cd('test_dir')
+    shell[0].do_ls('')
+    output = shell[1].get("1.0", tk.END)
+    assert 'test_file.txt' in output
+    assert 'subdir' in output
 
-def test_ls_empty_dir(shell, capsys):
-    shell.do_cd('test_dir/subdir')
-    shell.do_ls('')
-    captured = capsys.readouterr()
-    assert captured.out.strip() == ''
+def test_ls_empty_dir(shell):
+    shell[0].do_cd('test_dir/subdir')
+    shell[0].do_ls('')
+    output = shell[1].get("1.0", tk.END)
+    assert output.strip() == ''
 
 # Тесты для команды cd
 def test_cd_root(shell):
-    shell.do_cd('/')
-    assert shell.current_dir == '/'
+    shell[0].do_cd('/')
+    assert shell[0].current_dir == '/'
 
 def test_cd_subdir(shell):
-    shell.do_cd('test_dir')
-    assert shell.current_dir == '/test_dir'
+    shell[0].do_cd('test_dir')
+    assert shell[0].current_dir == '/test_dir'
 
-def test_cd_nonexistent(shell, capsys):
-    shell.do_cd('nonexistent')
-    captured = capsys.readouterr()
-    assert 'Нет такого каталога' in captured.out
-    assert shell.current_dir == '/'
+def test_cd_nonexistent(shell):
+    shell[0].do_cd('nonexistent')
+    output = shell[1].get("1.0", tk.END)
+    assert 'Нет такого каталога' in output
+    assert shell[0].current_dir == '/'
 
 # Тест для команды exit
 def test_exit(shell):
-    assert shell.do_exit('') is True 
+    shell[0].do_exit('')
+    assert shell[1].winfo_exists() == 0  # Проверяем, что окно закрыто
 
 # Тесты для команды who
-def test_who_output(shell, capsys):
-    shell.do_who('')
-    captured = capsys.readouterr()
-    assert 'student' in captured.out
-    assert 'pts/0' in captured.out
-    assert '2024-03-21' in captured.out
+def test_who_output(shell):
+    shell[0].do_who('')
+    output = shell[1].get("1.0", tk.END)
+    assert 'student' in output
+    assert 'pts/0' in output
+    assert '2024-03-21' in output
 
-def test_who_with_args(shell, capsys):
-    shell.do_who('some args')
-    captured = capsys.readouterr()
-    assert 'student' in captured.out  # Команда должна работать так же с аргументами
+def test_who_with_args(shell):
+    shell[0].do_who('some args')
+    output = shell[1].get("1.0", tk.END)
+    assert 'student' in output  # Команда должна работать так же с аргументами
 
-def test_who_format(shell, capsys):
-    shell.do_who('')
-    captured = capsys.readouterr()
-    parts = captured.out.split()
+def test_who_format(shell):
+    shell[0].do_who('')
+    output = shell[1].get("1.0", tk.END)
+    parts = output.split()
     assert len(parts) >= 4  # Проверяем формат вывода (имя, терминал, дата, время)
 
 # Тесты для команды tail
-def test_tail_nonexistent_file(shell, capsys):
-    shell.do_tail('nonexistent.txt')
-    captured = capsys.readouterr()
-    assert 'не найден' in captured.out
+def test_tail_nonexistent_file(shell):
+    shell[0].do_tail('nonexistent.txt')
+    output = shell[1].get("1.0", tk.END)
+    assert 'не найден' in output
 
-def test_tail_no_args(shell, capsys):
-    shell.do_tail('')
-    captured = capsys.readouterr()
-    assert 'Использование: tail' in captured.out
+def test_tail_no_args(shell):
+    shell[0].do_tail('')
+    output = shell[1].get("1.0", tk.END)
+    assert 'Использование: tail' in output
 
-def test_tail_empty_file(shell, capsys):
-    shell.do_tail('')  # Вызываем tail без аргументов
-    captured = capsys.readouterr()
-    assert "Использование: tail" in captured.out  # Проверяем, что выводится сообщение об использовании
+def test_tail_empty_file(shell):
+    shell[0].do_tail('')  # Вызываем tail без аргументов
+    output = shell[1].get("1.0", tk.END)
+    assert "Использование: tail" in output  # Проверяем, что выводится сообщение об использовании
 
 # Тесты для команды cp
-def test_cp_no_args(shell, capsys):
-    shell.do_cp('')
-    captured = capsys.readouterr()
-    assert 'Использование: cp' in captured.out
+def test_cp_no_args(shell):
+    shell[0].do_cp('')
+    output = shell[1].get("1.0", tk.END)
+    assert 'Использование: cp' in output
 
-def test_cp_nonexistent_source(shell, capsys):
-    shell.do_cp('nonexistent.txt dest.txt')
-    captured = capsys.readouterr()
-    assert 'не найден' in captured.out
+def test_cp_nonexistent_source(shell):
+    shell[0].do_cp('nonexistent.txt dest.txt')
+    output = shell[1].get("1.0", tk.END)
+    assert 'не найден' in output
 
-def test_cp_file(shell, capsys):
+def test_cp_file(shell):
     # Создаем исходный файл
     content = b'test content'
     info = tarfile.TarInfo('source.txt')
     info.size = len(content)
     info.type = tarfile.REGTYPE
-    shell.tar.addfile(info, io.BytesIO(content))
-    
-    shell.do_cp('source.txt dest.txt')
-    captured = capsys.readouterr()
-    assert 'успешно скопирован' in captured.out
+    shell[0].tar.addfile(info, io.BytesIO(content))
+    shell[0].do_cp('source.txt dest.txt')
+    output = shell[1].get("1.0", tk.END)
+    assert 'успешно скопирован' in output

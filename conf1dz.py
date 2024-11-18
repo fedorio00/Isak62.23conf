@@ -7,7 +7,6 @@ import tkinter as tk
 from tkinter import scrolledtext
 
 class ShellEmulator(cmd.Cmd):
-    prompt = '$ '
     
     def __init__(self, config_path, output_widget):
         super().__init__()
@@ -16,6 +15,7 @@ class ShellEmulator(cmd.Cmd):
         self.fs_path = self.config.get('fs_path')
         self._load_virtual_fs()
         self.output_widget = output_widget
+        
 
     def _load_config(self, config_path):
         """Загрузка конфигурации из toml файла"""
@@ -35,6 +35,7 @@ class ShellEmulator(cmd.Cmd):
 
     def do_ls(self, args):
         """Реализация команды ls"""
+        self.output_widget.insert(tk.END, "\n")
         path = self.current_dir.strip('/').replace('\\', '/')
         members = self.tar.getmembers()
         output = []
@@ -51,7 +52,7 @@ class ShellEmulator(cmd.Cmd):
                     if remaining and '/' not in remaining:
                         output.append(remaining)
 
-        self.output_widget.insert(tk.END, '\n'.join(output) + '\n')
+        self.output_widget.insert(tk.END, '\n'.join(output))
 
     def do_cd(self, args):
         """Реализация команды cd"""
@@ -68,11 +69,12 @@ class ShellEmulator(cmd.Cmd):
         if self._path_exists(new_path):
             self.current_dir = new_path
         else:
-            self.output_widget.insert(tk.END, f"cd: {args}: Нет такого каталога\n")
+            self.output_widget.insert(tk.END, f"\ncd: {args}: Нет такого каталога\n")
 
     def do_exit(self, args):
         """Выход из эмулятора"""
-        return True
+        self.output_widget.quit()  # Завершает цикл обработки событий
+        self.output_widget.master.destroy()  # Закрываем главное окно
 
     def _path_exists(self, path):
         """Проверка существования пути в виртуальной ФС"""
@@ -93,10 +95,11 @@ class ShellEmulator(cmd.Cmd):
 
     def do_who(self, args):
         """Показать пользователей, вошедших в систему"""
+        self.output_widget.insert(tk.END, "\n")
         self.output_widget.insert(tk.END, "student    pts/0        2024-03-21 10:00\n")
-
     def do_tail(self, args):
         """Показать последние строки файла"""
+        self.output_widget.insert(tk.END, "\n")
         if not args:
             self.output_widget.insert(tk.END, "Использование: tail <имя_файла>\n")
             return
@@ -128,9 +131,9 @@ class ShellEmulator(cmd.Cmd):
         
         finally:
             self._load_virtual_fs()
-
     def do_cp(self, args):
         """Копировать файл или каталог"""
+        self.output_widget.insert(tk.END, "\n")
         if not args:
             self.output_widget.insert(tk.END, "Использование: cp <источник> <назначение>\n")
             return
@@ -200,7 +203,7 @@ def run_shell():
     root = tk.Tk()
     root.title("Shell Emulator")
 
-    output_widget = scrolledtext.ScrolledText(root, wrap=tk.WORD)
+    output_widget = scrolledtext.ScrolledText(root, wrap=tk.WORD, bg='black', fg='white', insertbackground='white')
     output_widget.pack(expand=True, fill='both')
 
     config_path = 'config.toml'
@@ -208,7 +211,6 @@ def run_shell():
 
     def on_enter(event):
         command = output_widget.get("end-2c linestart", "end-1c")
-        output_widget.insert(tk.END, shell.prompt + command + '\n')
         shell.onecmd(command)
         output_widget.see(tk.END)
 
