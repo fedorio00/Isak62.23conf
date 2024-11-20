@@ -93,12 +93,13 @@ class ShellEmulator(cmd.Cmd):
     
     def do_tail(self, args):
         self.output_widget.insert(tk.END, "\n")
-        if not args:
+        if not args.strip():
             self.output_widget.insert(tk.END, "Использование: tail <имя_файла>\n")
             return
 
+        file_path = os.path.normpath(os.path.join(self.current_dir, args.strip())).replace('\\', '/').strip('/')
+
         try:
-            file_path = os.path.normpath(os.path.join(self.current_dir, args)).replace('\\', '/').strip('/')
             self.tar.close()
             with tarfile.open(self.fs_path, 'r:') as tar:
                 try:
@@ -107,21 +108,18 @@ class ShellEmulator(cmd.Cmd):
                         self.output_widget.insert(tk.END, f"Ошибка: {args} не является файлом\n")
                         return
                     
-                    f = tar.extractfile(member)
-                    if f is None:
-                        self.output_widget.insert(tk.END, f"Ошибка: невозможно прочитать файл {args}\n")
-                        return
-                    
-                    content = f.read().decode('utf-8')
-                    lines = content.splitlines()[-10:]
-                    if lines:
-                        self.output_widget.insert(tk.END, '\n'.join(lines) + '\n')
+                    with tar.extractfile(member) as f:
+                        content = f.read().decode('utf-8')
+                        lines = content.splitlines()
+                        # Вывод последних 10 строк
+                        tail_lines = lines[:10] if len(lines) >= 10 else lines
+                        for line in tail_lines:
+                            self.output_widget.insert(tk.END, line + '\n')
+                            
                 except KeyError:
                     self.output_widget.insert(tk.END, f"Ошибка: файл {args} не найден\n")
-                    
         except Exception as e:
             self.output_widget.insert(tk.END, f"Ошибка: {e}\n")
-        
         finally:
             self._load_virtual_fs()
     
@@ -184,11 +182,21 @@ class ShellEmulator(cmd.Cmd):
         finally:
             self._load_virtual_fs()
 
+    def default(self, line):
+        # Обработка неизвестной команды
+        self.output_widget.insert(tk.END, f"\nunknown syntax: {line}\n")
+
     def cmdloop(self):
         while True:
-            command = input(self.prompt)
-            if self.onecmd(command):
-                break
+            command = self.output_widget.get("end-2c linestart", "end-1c").strip()  # Получаем команду из виджета
+            if command:  # Проверяем, что команда не пустая
+                try:
+                    if self.onecmd(command):
+                        break
+                except Exception as e:
+                    self.output_widget.insert(tk.END, f"Ошибка: {str(e)}\n")  # Обработка исключений
+            else:
+                self.output_widget.insert(tk.END, "Введите команду.\n")  # Сообщение для пустой команды
 
 def run_shell():
     root = tk.Tk()
