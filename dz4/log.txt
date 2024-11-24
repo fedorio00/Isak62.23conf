@@ -1,0 +1,192 @@
+- line: 6
+  command: LOAD
+  operands:
+  - '100'
+  - '123456'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xC8'
+  - '0x01'
+  - '0xE2'
+  - '0x40'
+- line: 7
+  command: LOAD
+  operands:
+  - '101'
+  - '789012'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xCA'
+  - '0x0C'
+  - '0x0A'
+  - '0x14'
+- line: 8
+  command: LOAD
+  operands:
+  - '102'
+  - '345678'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xCC'
+  - '0x05'
+  - '0x46'
+  - '0x4E'
+- line: 9
+  command: LOAD
+  operands:
+  - '103'
+  - '901234'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xCE'
+  - '0x0D'
+  - '0xC0'
+  - '0x72'
+- line: 10
+  command: LOAD
+  operands:
+  - '104'
+  - '567890'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xD0'
+  - '0x08'
+  - '0xAA'
+  - '0x52'
+- line: 11
+  command: LOAD
+  operands:
+  - '105'
+  - '432109'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xD2'
+  - '0x06'
+  - '0x97'
+  - '0xED'
+- line: 12
+  command: LOAD
+  operands:
+  - '106'
+  - '876543'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xD4'
+  - '0x0D'
+  - '0x5F'
+  - '0xFF'
+- line: 13
+  command: LOAD
+  operands:
+  - '107'
+  - '210987'
+  bytes:
+  - '0xF0'
+  - '0x00'
+  - '0xD6'
+  - '0x03'
+  - '0x38'
+  - '0x2B'
+- line: 16
+  command: BITREV
+  operands:
+  - '100'
+  - '100'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x40'
+  - '0x64'
+- line: 17
+  command: BITREV
+  operands:
+  - '101'
+  - '101'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x50'
+  - '0x65'
+- line: 18
+  command: BITREV
+  operands:
+  - '102'
+  - '102'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x60'
+  - '0x66'
+- line: 19
+  command: BITREV
+  operands:
+  - '103'
+  - '103'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x70'
+  - '0x67'
+- line: 20
+  command: BITREV
+  operands:
+  - '104'
+  - '104'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x80'
+  - '0x68'
+- line: 21
+  command: BITREV
+  operands:
+  - '105'
+  - '105'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0x90'
+  - '0x69'
+- line: 22
+  command: BITREV
+  operands:
+  - '106'
+  - '106'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0xA0'
+  - '0x6A'
+- line: 23
+  command: BITREV
+  operands:
+  - '107'
+  - '107'
+  bytes:
+  - '0x00'
+  - '0x00'
+  - '0x1C'
+  - '0x06'
+  - '0xB0'
+  - '0x6B'
