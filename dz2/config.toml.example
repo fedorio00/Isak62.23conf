@@ -1,0 +1,5 @@
+[paths]
+visualizer = "mermaid-cli"     # Инструмент для визуализации
+repository = "./repo-path"      # Путь к git репозиторию
+output = "output.md"           # Выходной файл с диаграммой
+target_file = "example.txt"    # Файл для анализа
