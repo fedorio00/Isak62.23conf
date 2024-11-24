@@ -1,0 +1,19 @@
+=begin
+Конфигурация сенсорной системы
+Настройки для датчиков температуры
+=end
+
+! Пороговые значения температуры
+var min_temp = -40;
+var max_temp = 85;
+var alert_temps = { -30, 0, 50, 75 };
+
+! Интервалы проверки (в секундах)
+var check_interval = 60;
+var alert_interval = 10;
+
+! Вычисление диапазона температур
+[max_temp - min_temp]
+
+! Минимальный интервал
+[min(check_interval, alert_interval)]
