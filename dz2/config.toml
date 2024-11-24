@@ -1,0 +1,6 @@
+[paths]
+visualizer = "mermaid-cli"
+repository = "C:/Users/fedorio/Desktop/cursor/siaod"
+output = "dependency_graph.md"
+target_file = "siaod6.2"
+
