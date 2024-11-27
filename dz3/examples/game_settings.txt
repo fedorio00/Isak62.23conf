@@ -4,15 +4,13 @@
 =end
 
 ! Параметры мира
-var world_size = 1000;
-var spawn_points = { 0, 100, 200, 300 };
+var world_size = 1000
+var spawn_points = {0, 100, 200, 300}
 
 ! Игровые константы
-var base_health = 100;
-var bonus_health = 50;
+var base_health = 100
+var bonus_health = 50
 
-! Максимальное здоровье игрока
+! Вычисляемые значения
 [base_health + bonus_health]
-
-! Максимальная точка спавна
 [max(spawn_points)]

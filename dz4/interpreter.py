@@ -22,21 +22,32 @@ class VirtualMachine:
     def execute_instruction(self, instr: Instruction) -> None:
         """Выполняет одну инструкцию."""
         if instr.type == InstructionType.LOAD_CONST:
+            # B: адрес для записи
+            # C: константа для записи
             addr, const = instr.operands
             self.memory[addr] = const
 
         elif instr.type == InstructionType.READ_MEMORY:
+            # B: адрес назначения
+            # C: адрес источника
+            # D: смещение
             dest, src, offset = instr.operands
-            addr = self.memory[src] + offset
-            self.memory[dest] = self.memory[addr]
+            # Читаем значение прямо из адреса src + offset
+            self.memory[dest] = self.memory[src + offset]
 
         elif instr.type == InstructionType.WRITE_MEMORY:
+            # B: адрес источника
+            # C: адрес назначения
             src, dest = instr.operands
-            self.memory[dest] = self.memory[src]
+            value = self.memory[src]  # Получаем значение из памяти по адресу источника
+            self.memory[dest] = value  # Записываем значение по адресу назначения
 
         elif instr.type == InstructionType.BITREVERSE:
-            dest, src = instr.operands
-            self.memory[dest] = bitreverse(self.memory[src])
+            # B: адрес результата
+            # C: адрес источника
+            result_addr, src_addr = instr.operands
+            value = self.memory[src_addr]  # Получаем значение из памяти по адресу источника
+            self.memory[result_addr] = bitreverse(value)  # Записываем результат по адресу назначения
 
     def run(self) -> None:
         """Выполняет программу."""

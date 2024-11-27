@@ -2,6 +2,7 @@ import argparse
 import re
 import sys
 import tomli_w
+import os
 
 class ConfigParser:
     def __init__(self):
@@ -12,30 +13,43 @@ class ConfigParser:
     def parse_file(self, filename):
         try:
             with open(filename, 'r', encoding='utf-8') as f:
-                self.lines = f.readlines()
+                self.lines = [line.strip() for line in f.readlines()]
             return self.parse()
         except FileNotFoundError:
-            print(f"Ошибка: Файл {filename} не найден", file=sys.stderr)
             sys.exit(1)
 
     def parse(self):
         result = {}
+        in_multiline_comment = False
+        
         while self.current_line < len(self.lines):
             line = self.lines[self.current_line].strip()
             
-            # Пропуск пустых строк
+            # Пропускаем пустые строки
             if not line:
                 self.current_line += 1
                 continue
             
-            # Обработка однострочных комментариев
-            if line.startswith('!'):
+            # Обработка начала многострочного комментария
+            if line == '=begin':
+                in_multiline_comment = True
                 self.current_line += 1
                 continue
             
-            # Обработка многострочных комментариев
-            if line == '=begin':
-                self.skip_multiline_comment()
+            # Обработка конца многострочного комментария
+            if line == '=end':
+                in_multiline_comment = False
+                self.current_line += 1
+                continue
+            
+            # Пропускаем строки внутри многострочного комментария
+            if in_multiline_comment:
+                self.current_line += 1
+                continue
+            
+            # Пропускаем однострочные комментарии
+            if line.startswith('!'):
+                self.current_line += 1
                 continue
             
             # Обработка объявления переменных
@@ -44,47 +58,51 @@ class ConfigParser:
                 self.current_line += 1
                 continue
             
-            # Обработка выражений в квадратных скобках
-            if line.startswith('[') or line.startswith('.['):
-                is_constant = line.startswith('.[')
-                expr = line[2:-1].strip() if is_constant else line[1:-1].strip()
-                value = self.evaluate_expression(expr)
-                result['expression_result'] = value
+            # Обработка выражений
+            if line.startswith('['):
+                expr = line[1:-1].strip()
+                try:
+                    value = self.evaluate_expression(expr)
+                    result[expr] = value
+                except Exception:
+                    pass
                 self.current_line += 1
                 continue
-
+            
+            # Если строка не подходит ни под один формат
             self.current_line += 1
+
+        if in_multiline_comment:
+            raise SyntaxError("Незакрытый многострочный комментарий")
             
         return result
 
-    def skip_multiline_comment(self):
-        self.current_line += 1
-        while self.current_line < len(self.lines):
-            if self.lines[self.current_line].strip() == '=end':
-                self.current_line += 1
-                return
-            self.current_line += 1
-        raise SyntaxError("Незакрытый многострочный комментарий")
-
     def parse_variable(self, line):
-        match = re.match(r'var\s+([a-zA-Z][a-zA-Z0-9]*)\s*=\s*(.+);', line)
+        match = re.match(r'var\s+(\w+)\s*=\s*(.+)', line)
         if not match:
             raise SyntaxError(f"Некорректное объявление переменной в строке {self.current_line + 1}")
         
         name, value = match.groups()
-        value = value.rstrip(';').strip()
-        if value.startswith('{'):
-            self.variables[name] = self.parse_array(value)
-        else:
-            try:
-                self.variables[name] = float(value)
-            except ValueError:
-                raise SyntaxError(f"Некорректное значение в строке {self.current_line + 1}")
+        value = value.strip().rstrip(';').strip()
+        
+        try:
+            if value.startswith('{') and value.endswith('}'):
+                self.variables[name] = self.parse_array(value)
+            else:
+                try:
+                    if '.' in value:
+                        self.variables[name] = float(value)
+                    else:
+                        self.variables[name] = int(value)
+                except ValueError:
+                    if value.startswith('"') and value.endswith('"'):
+                        self.variables[name] = value[1:-1]
+                    else:
+                        raise SyntaxError(f"Некорректное значение в строке {self.current_line + 1}")
+        except Exception as e:
+            raise SyntaxError(f"Ошибка в строке {self.current_line + 1}: {str(e)}")
 
     def parse_array(self, array_str):
-        if not (array_str.startswith('{') and array_str.endswith('}')):
-            raise SyntaxError(f"Некорректный формат массива в строке {self.current_line + 1}")
-        
         content = array_str[1:-1].strip()
         if not content:
             return []
@@ -92,56 +110,66 @@ class ConfigParser:
         elements = []
         for item in content.split(','):
             item = item.strip()
+            if not item:
+                continue
+            
             try:
-                elements.append(float(item))
+                # Пробуем сначала как целое число, потом как float
+                try:
+                    elements.append(int(item))
+                except ValueError:
+                    elements.append(float(item))
             except ValueError:
-                raise SyntaxError(f"Некорректный элемент массива в строке {self.current_line + 1}")
-        
+                raise SyntaxError(f"Некорректное значение '{item}' в массиве")
+                
         return elements
 
     def evaluate_expression(self, expr):
-        # Замена переменных их значениями
-        for var_name, var_value in self.variables.items():
-            if isinstance(var_value, list):
-                continue
-            expr = expr.replace(var_name, str(var_value))
+        # Проверяем, является ли это вызовом max для массива
+        if expr.startswith('max(') and expr.endswith(')'):
+            var_name = expr[4:-1].strip()
+            if var_name in self.variables:
+                value = self.variables[var_name]
+                if isinstance(value, list):
+                    return max(value)
+                else:
+                    raise ValueError(f"Переменная '{var_name}' не является массивом")
+            else:
+                raise ValueError(f"Переменная '{var_name}' не найдена")
         
-        # Обработка функции max
-        if 'max(' in expr:
-            match = re.search(r'max\((.*?)\)', expr)
-            if match:
-                args_str = match.group(1)
-                args = []
-                for arg in args_str.split(','):
-                    arg = arg.strip()
-                    if arg in self.variables:
-                        if isinstance(self.variables[arg], list):
-                            args.extend(self.variables[arg])
-                        else:
-                            args.append(self.variables[arg])
-                    else:
-                        try:
-                            args.append(float(arg))
-                        except ValueError:
-                            raise SyntaxError(f"Некорректный аргумент в функции max в строке {self.current_line + 1}")
-                return max(args)
+        # Если это не max для массива, обрабатываем как обычное выражение
+        for name, value in self.variables.items():
+            if isinstance(value, (int, float)):
+                expr = re.sub(r'\b' + name + r'\b', str(value), expr)
         
-        # Вычисление простых арифметических выражений
         try:
-            return float(eval(expr, {"__builtins__": None}, {}))
-        except:
-            raise SyntaxError(f"Некорректное выражение в строке {self.current_line + 1}")
+            safe_dict = {'__builtins__': None}
+            return eval(expr, {"__builtins__": None}, safe_dict)
+        except Exception as e:
+            raise ValueError(f"Ошибка в выражении: {str(e)}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Конвертер конфигурационного языка в TOML')
-    parser.add_argument('--input', required=True, help='Путь к входному файлу')
+    parser = argparse.ArgumentParser(description='Конвертер конфигурационных файлов')
+    parser.add_argument('--input', required=True, help='Входной конфигурационный файл')
+    parser.add_argument('--output', help='Выходной TOML файл (по умолчанию: input_config.toml)', default=None)
     args = parser.parse_args()
 
     config_parser = ConfigParser()
     result = config_parser.parse_file(args.input)
     
-    # Вывод результата в TOML формате
-    print(tomli_w.dumps(result))
+    output = {
+        "variables": config_parser.variables,
+        "expressions": result
+    }
+    
+    if args.output:
+        output_file = args.output
+    else:
+        base_name = os.path.splitext(args.input)[0]
+        output_file = f"{base_name}_config.toml"
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(tomli_w.dumps(output))
 
 if __name__ == '__main__':
     main()

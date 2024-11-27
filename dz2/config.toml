@@ -1,6 +1,6 @@
 [paths]
 visualizer = "mermaid-cli"
-repository = "C:/Users/fedorio/Desktop/cursor/siaod"
+repository = "C:/Users/fedorio/Desktop/cursor/Isak62.23conf"
 output = "dependency_graph.md"
-target_file = "siaod6.2"
+target_file = "dz1"
 
