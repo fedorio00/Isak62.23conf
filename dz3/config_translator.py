@@ -59,11 +59,11 @@ class ConfigParser:
                 continue
             
             # Обработка выражений
-            if line.startswith('['):
-                expr = line[1:-1].strip()
+            if line.startswith('[') or line.startswith('.['):
+                expr = line.strip('.[').strip(']').strip()
                 try:
                     value = self.evaluate_expression(expr)
-                    result[expr] = value
+                    result['expression_result'] = float(value)
                 except Exception:
                     pass
                 self.current_line += 1
@@ -125,19 +125,23 @@ class ConfigParser:
         return elements
 
     def evaluate_expression(self, expr):
-        # Проверяем, является ли это вызовом max для массива
+        # Проверяем, является ли это вызовом max
         if expr.startswith('max(') and expr.endswith(')'):
-            var_name = expr[4:-1].strip()
-            if var_name in self.variables:
-                value = self.variables[var_name]
+            args_str = expr[4:-1].strip()
+            if args_str in self.variables:
+                # Если аргумент - это имя переменной
+                value = self.variables[args_str]
                 if isinstance(value, list):
-                    return max(value)
-                else:
-                    raise ValueError(f"Переменная '{var_name}' не является массивом")
+                    return float(max(value))
             else:
-                raise ValueError(f"Переменная '{var_name}' не найдена")
+                # Если аргументы переданы напрямую
+                try:
+                    args = [float(x.strip()) for x in args_str.split(',')]
+                    return max(args)
+                except ValueError:
+                    raise ValueError(f"Некорректные аргументы для функции max: {args_str}")
         
-        # Если это не max для массива, обрабатываем как обычное выражение
+        # Если это не max, обрабатываем как обычное выражение
         for name, value in self.variables.items():
             if isinstance(value, (int, float)):
                 expr = re.sub(r'\b' + name + r'\b', str(value), expr)

@@ -1,97 +1,49 @@
-- line: 5
-  command: LOAD
-  operands:
-  - '123'
-  - '42'
-  bytes:
-  - '0x7C'
-  - '0x4B'
-  - '0x50'
-  - '0x0C'
-  - '0x00'
-  - '0x00'
-- line: 6
-  command: LOAD
-  operands:
-  - '300'
-  - '123'
-  bytes:
-  - '0x7C'
-  - '0x4B'
-  - '0x50'
-  - '0x0C'
-  - '0x00'
-  - '0x00'
 - line: 7
   command: LOAD
   operands:
-  - '581'
-  - '456'
+  - '31'
+  - '78'
   bytes:
-  - '0x7C'
-  - '0x4B'
-  - '0x50'
-  - '0x0C'
+  - '0xFC'
+  - '0x07'
+  - '0x38'
+  - '0x01'
   - '0x00'
   - '0x00'
-- line: 8
-  command: LOAD
-  operands:
-  - '51'
-  - '700'
-  bytes:
-  - '0x7C'
-  - '0x4B'
-  - '0x50'
-  - '0x0C'
-  - '0x00'
-  - '0x00'
-- line: 13
-  command: LOAD
-  operands:
-  - '188'
-  - '788'
-  bytes:
-  - '0x7C'
-  - '0x4B'
-  - '0x50'
-  - '0x0C'
-  - '0x00'
-  - '0x00'
-- line: 17
+- line: 12
   command: READ
   operands:
   - '766'
-  - '300'
-  - '13'
+  - '33'
+  - '3'
   bytes:
   - '0xA7'
   - '0xBF'
-  - '0x34'
-  - '0x45'
-  - '0x03'
+  - '0x84'
+  - '0xC0'
   - '0x00'
-- line: 21
+  - '0x00'
+- line: 17
   command: WRITE
   operands:
-  - '581'
-  - '100'
+  - '51'
+  - '19'
   bytes:
-  - '0x75'
-  - '0x91'
-  - '0xCC'
-  - '0x02'
+  - '0xF5'
+  - '0x0C'
+  - '0x4C'
   - '0x00'
   - '0x00'
-- line: 25
+  - '0x00'
+- line: 22
   command: BITREV
   operands:
-  - '253'
-  - '51'
+  - '23'
+  - '5'
   bytes:
-  - '0x5C'
-  - '0x3F'
-  - '0xCC'
+  - '0xDC'
+  - '0x05'
+  - '0x14'
   - '0x00'
   - '0x00'
   - '0x00'
