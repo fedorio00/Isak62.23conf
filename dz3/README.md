@@ -1,3 +1,4 @@
+https://github.com/fedorio00/Isak62.23conf
 # Config Translator
 
 ## Что делает этот проект?
